@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#080d1a" />
+  <title>Hyllie → CPH Alarm</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #080d1a; color: #dde4f0;
+      font-family: 'DM Mono', 'Courier New', monospace;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; padding: 32px 16px 60px;
+    }
+    .header { width: 100%; max-width: 540px; margin-bottom: 24px; }
+    .tag { font-size: 10px; letter-spacing: 4px; color: #4e7de8; font-weight: 700;
+      text-transform: uppercase; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    h1 { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+    .subtitle { font-size: 10px; color: #2a3550; margin-top: 4px; }
+
+    #setup { width: 100%; max-width: 540px; margin-bottom: 20px; }
+    .setup-card { background: #0d1525; border: 1.5px solid #1e3060; border-radius: 12px; padding: 16px; }
+    .setup-title { font-size: 11px; font-weight: 700; color: #4e7de8; letter-spacing: 1px;
+      text-transform: uppercase; margin-bottom: 10px; }
+    .setup-desc { font-size: 11px; color: #4a5a7a; margin-bottom: 12px; line-height: 1.6; }
+    .setup-desc a { color: #4e7de8; }
+    .key-row { display: flex; gap: 8px; }
+    .key-input { flex: 1; background: #080d1a; border: 1.5px solid #1e2a42; border-radius: 8px;
+      color: #dde4f0; font-family: inherit; font-size: 12px; padding: 9px 12px; outline: none; }
+    .key-input:focus { border-color: #4e7de8; }
+    .key-btn { background: #4e7de8; color: #fff; border: none; border-radius: 8px;
+      padding: 9px 16px; font-size: 12px; font-weight: 700; cursor: pointer;
+      font-family: inherit; white-space: nowrap; }
+    .key-btn:active { opacity: 0.8; }
+
+    .block { width: 100%; max-width: 540px; margin-bottom: 20px; }
+    .block-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .block-num { font-size: 9px; font-weight: 800; letter-spacing: 3px; color: #1a2540;
+      background: #0d1220; border: 1px solid #161e30; border-radius: 4px; padding: 2px 6px; }
+    .block-title { font-size: 11px; font-weight: 700; color: #4e7de8; letter-spacing: 1px; text-transform: uppercase; }
+
+    .row-btn { width: 100%; margin-bottom: 7px; background: #0d1220;
+      border: 1.5px solid #161e30; border-radius: 10px; padding: 11px 14px;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; color: #dde4f0; text-align: left; gap: 8px;
+      transition: border-color 0.15s, background 0.15s; }
+    .row-btn.active { background: #0f1f45; border-color: #4e7de8; }
+    .row-btn.delayed { border-color: #f59e0b; }
+    .row-btn.cancelled { border-color: #f87171; background: #1a0808; opacity: 0.7; }
+    .row-btn:active { opacity: 0.8; }
+
+    .shift-date { font-size: 12px; font-weight: 700; color: #7080a0; }
+    .row-btn.active .shift-date { color: #6fa0ff; }
+    .shift-title { font-size: 10px; color: #2a3550; margin-top: 2px; }
+    .shift-time { font-size: 20px; font-weight: 800; color: #1e2a42; }
+    .row-btn.active .shift-time { color: #4e7de8; }
+
+    .train-row { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 6px; }
+    .train-col { display: flex; flex-direction: column; min-width: 0; }
+    .train-label { font-size: 10px; color: #2a3550; }
+    .train-time-wrap { display: flex; align-items: baseline; gap: 5px; }
+    .train-time { font-size: 19px; font-weight: 800; color: #4a5a7a; }
+    .row-btn.active .train-time { color: #6fa0ff; }
+    .train-time.on-time { color: #4ade80; }
+    .train-time.delayed-time { color: #f59e0b; }
+    .train-time.cancelled-time { color: #f87171; text-decoration: line-through; }
+    .train-sched { font-size: 11px; color: #3a4560; text-decoration: line-through; }
+    .train-line { font-size: 9px; color: #2a3550; margin-top: 2px; }
+    .train-arrow { font-size: 10px; color: #1a2538; flex-shrink: 0; }
+
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 3px;
+      border-radius: 4px; padding: 2px 6px; font-size: 9px; font-weight: 700;
+      letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap;
+    }
+    .status-ontime  { background: #0a2e18; color: #4ade80; }
+    .status-delayed { background: #2a1f05; color: #f59e0b; }
+    .status-cancelled { background: #2a0808; color: #f87171; }
+
+    .badge { border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+
+    .delay-banner {
+      background: #2a1a00; border: 1px solid #f59e0b; border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 10px; font-size: 11px; color: #f59e0b;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .summary-card { background: #0a1128; border: 1px solid #161e30;
+      border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .stat { text-align: center; }
+    .stat-label { font-size: 10px; color: #2a3550; margin-bottom: 3px; }
+    .stat-val { font-size: 20px; font-weight: 800; }
+    .stat-sub { font-size: 9px; color: #3a4560; margin-top: 2px; }
+    .summary-footer { margin-top: 10px; padding-top: 10px; border-top: 1px solid #161e30;
+      font-size: 10px; color: #2a3550; text-align: center; }
+
+    .alarm-btn { width: 100%; padding: 16px; border-radius: 12px;
+      background: linear-gradient(135deg, #1a3fcc, #2a5af5);
+      color: #fff; border: none; font-size: 15px; font-weight: 800;
+      cursor: pointer; letter-spacing: 0.5px; font-family: inherit;
+      box-shadow: 0 6px 24px rgba(66,120,255,0.4);
+      display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .alarm-btn:active { opacity: 0.85; }
+    .alarm-hint { margin-top: 8px; font-size: 10px; color: #2a3550; text-align: center; }
+
+    /* Fallback timetable notice */
+    .fallback-notice {
+      background: #0d1525; border: 1px solid #1e2a42; border-radius: 8px;
+      padding: 8px 12px; margin-bottom: 10px; font-size: 10px; color: #4a5a7a;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .hint { font-size: 11px; color: #2a3550; margin-bottom: 9px; }
+    .hint.err { color: #f87171; }
+    .loading { color: #4e7de8; font-size: 12px; padding: 10px 0; display: flex; align-items: center; gap: 8px; }
+    .spin { display: inline-block; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .live-badge { display: inline-flex; align-items: center; gap: 4px;
+      background: #0a2e18; color: #4ade80; font-size: 9px; font-weight: 700;
+      border-radius: 4px; padding: 2px 6px; letter-spacing: 1px; }
+    .sched-badge { display: inline-flex; align-items: center; gap: 4px;
+      background: #0d1525; color: #4a5a7a; font-size: 9px; font-weight: 700;
+      border-radius: 4px; padding: 2px 6px; letter-spacing: 1px; }
+    .dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .refresh-btn { background: none; border: 1px solid #1e2a42; border-radius: 6px;
+      color: #4a5a7a; font-size: 10px; cursor: pointer; padding: 4px 10px; font-family: inherit; }
+    .refresh-btn:active { opacity: 0.7; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag"><span>🚆</span> Commute Alarm</div>
+  <h1>Hyllie → CPH Airport</h1>
+  <p class="subtitle">Live departures + delay status · Skånetrafiken / ResRobot</p>
+</div>
+
+<div id="setup">
+  <div class="setup-card">
+    <div class="setup-title">🔑 ResRobot API Key</div>
+    <div class="setup-desc">
+      Free key from <a href="https://www.trafiklab.se" target="_blank">trafiklab.se</a> →
+      sign up → create project → add <strong>ResRobot v2.1</strong> → copy key.
+    </div>
+    <div class="key-row">
+      <input class="key-input" id="api-key-input" type="password" placeholder="Paste ResRobot API key…" />
+      <button class="key-btn" onclick="saveKey()">Save</button>
+    </div>
+    <div id="key-status" style="font-size:10px;color:#2a3550;margin-top:8px;"></div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-header">
+    <span class="block-num">01</span>
+    <span class="block-title">Pick your shift</span>
+  </div>
+  <div id="shifts-container"><div class="loading"><span class="spin">⟳</span> Loading…</div></div>
+</div>
+
+<div class="block" id="trains-block" style="display:none">
+  <div class="block-header">
+    <span class="block-num">02</span>
+    <span class="block-title" id="trains-title">Trains</span>
+    <span id="data-badge" class="live-badge"><span class="dot"></span>Live</span>
+    <button class="refresh-btn" onclick="refreshTrains()">↻ Refresh</button>
+  </div>
+  <div class="hint">Arrive CPH ≥30 min before shift · tap a train to set alarm</div>
+  <div id="trains-container"></div>
+</div>
+
+<div class="block" id="alarm-block" style="display:none">
+  <div class="block-header">
+    <span class="block-num">03</span>
+    <span class="block-title">Set alarm</span>
+  </div>
+  <div id="delay-banner" style="display:none" class="delay-banner"></div>
+  <div class="summary-card">
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">⏰ Alarm</div>
+        <div class="stat-val" id="s-alarm" style="color:#f59e0b"></div>
+        <div class="stat-sub" id="s-alarm-note"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">🚆 Departs</div>
+        <div class="stat-val" id="s-train" style="color:#4e7de8"></div>
+        <div class="stat-sub" id="s-train-sched"></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">✈️ Est. CPH</div>
+        <div class="stat-val" id="s-arrive" style="color:#4ade80"></div>
+      </div>
+    </div>
+    <div class="summary-footer" id="s-footer"></div>
+  </div>
+  <button class="alarm-btn" id="alarm-btn">
+    <span>⏰</span><span id="alarm-btn-label">Tap to set alarm</span>
+  </button>
+  <div class="alarm-hint">Opens Android Clock · confirm to save · alarm uses real-time departure</div>
+</div>
+
+<script>
+const HYLLIE_ID = "740001586";
+const BUFFER    = 30;
+const JOURNEY   = 14;
+
+// ── Fallback hardcoded timetable (from official PDFs) ──────────────────────
+const FALLBACK = [
+  [4,44,4,58],[5,14,5,28],[5,44,5,58],[5,59,6,13],
+  [6,14,6,28],[6,29,6,43],[6,44,6,58],[6,59,7,13],
+  [7,14,7,28],[7,29,7,43],[7,44,7,58],[7,59,8,13],
+  [8,14,8,28],[8,29,8,43],[8,44,8,58],[8,59,9,13],
+  [9,14,9,28],[9,29,9,43],[9,44,9,58],[9,59,10,13],
+  [10,14,10,28],[10,29,10,43],[10,44,10,58],[10,59,11,13],
+  [11,14,11,28],[11,29,11,43],[11,44,11,58],[11,59,12,13],
+  [12,14,12,28],[12,29,12,43],[12,44,12,58],[12,59,13,13],
+  [13,14,13,28],[13,29,13,43],[13,44,13,58],[13,59,14,13],
+  [14,14,14,28],[14,29,14,43],[14,44,14,58],[14,59,15,13],
+  [15,14,15,28],[15,29,15,43],[15,44,15,58],[15,59,16,13],
+  [16,14,16,28],[16,29,16,43],[16,44,16,58],[16,59,17,13],
+  [17,14,17,29],[17,29,17,43],[17,44,17,58],[17,59,18,13],
+  [18,14,18,28],[18,29,18,43],[18,44,18,58],[18,59,19,13],
+  [19,14,19,28],[19,44,19,58],
+  [20,14,20,28],[20,44,20,58],[20,59,21,13],
+  [21,14,21,28],[21,44,21,58],[21,59,22,13],
+  [22,14,22,28],[22,44,22,58],[22,59,23,10],
+  [23,35,23,44],
+];
+
+const RAW_EVENTS = [
+  { date:"2026-06-05", title:"1000-1730" },
+  { date:"2026-06-06", title:"0815-1600" },
+  { date:"2026-06-07", title:"0600-1615" },
+  { date:"2026-06-08", title:"0600-1530" },
+  { date:"2026-06-10", title:"0800-1600" },
+  { date:"2026-06-11", title:"1000-1800" },
+  { date:"2026-06-15", title:"1400-2115" },
+  { date:"2026-06-16", title:"0815-2000" },
+  { date:"2026-06-19", title:"0945-2000" },
+  { date:"2026-06-20", title:"0815-2000" },
+  { date:"2026-06-21", title:"0815-1500" },
+];
+
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function pad(n){ return String(n).padStart(2,"0"); }
+function toMin(h,m){ return h*60+m; }
+function fromMin(mins){
+  const n=((mins%1440)+1440)%1440;
+  return `${pad(Math.floor(n/60))}:${pad(n%60)}`;
+}
+function dateLabel(d){ const dt=new Date(d+"T12:00:00"); return `${DAYS[dt.getDay()]} ${dt.getDate()} Jun`; }
+function parseShifts(evts){
+  return evts.map(e=>{
+    const m=e.title.match(/^(\d{2})(\d{2})-/);
+    if(!m) return null;
+    return { date:e.date, title:e.title, shiftStart:`${m[1]}:${m[2]}` };
+  }).filter(Boolean);
+}
+
+// ── API Key ────────────────────────────────────────────────────────────────
+let API_KEY = localStorage.getItem("resrobot_key") || "";
+function saveKey(){
+  const val = document.getElementById("api-key-input").value.trim();
+  if(!val){ alert("Please paste your API key first."); return; }
+  API_KEY = val;
+  localStorage.setItem("resrobot_key", val);
+  setKeyStatus("✓ Key saved", "#4ade80");
+  init();
+}
+function setKeyStatus(msg, col){
+  const el=document.getElementById("key-status");
+  el.textContent=msg; el.style.color=col;
+}
+function loadKeyUI(){
+  if(API_KEY){
+    document.getElementById("api-key-input").value=API_KEY;
+    setKeyStatus("✓ Key loaded","#4ade80");
+  }
+}
+
+// ── ResRobot departures ────────────────────────────────────────────────────
+async function fetchDepartures(shiftStart, shiftDate){
+  if(!API_KEY) return null;
+  const [sh,sm]=shiftStart.split(":").map(Number);
+  const searchMin=toMin(sh,sm)-BUFFER-120;
+  const sH=Math.floor(((searchMin%1440)+1440)%1440/60);
+  const sM=((searchMin%1440)+1440)%1440%60;
+
+  const url=`https://api.resrobot.se/v2.1/departureBoard?id=${HYLLIE_ID}` +
+    `&date=${shiftDate}&time=${pad(sH)}:${pad(sM)}` +
+    `&maxJourneys=50&format=json&accessId=${API_KEY}`;
+
+  try {
+    const res=await fetch(url);
+    if(!res.ok) return null;
+    const data=await res.json();
+    return data.Departure || [];
+  } catch { return null; }
+}
+
+// ── Parse with delay info ─────────────────────────────────────────────────
+function parseDepartures(departures, shiftStart){
+  const [sh,sm]=shiftStart.split(":").map(Number);
+  const shiftMin=toMin(sh,sm);
+  const mustArriveBy=shiftMin-BUFFER;
+
+  return departures
+    .filter(d=>{
+      const dir=(d.direction||"").toLowerCase();
+      return dir.includes("københavn")||dir.includes("kobenhavn")||
+             dir.includes("kastrup")||dir.includes("airport")||
+             dir.includes("ørestad")||dir.includes("orestad")||
+             dir.includes("tårnby")||dir.includes("cph");
+    })
+    .map(d=>{
+      // Scheduled time
+      const schedTime=(d.time||"").slice(0,5);
+      if(!schedTime) return null;
+      const [sdh,sdm]=schedTime.split(":").map(Number);
+      const schedMin=toMin(sdh,sdm);
+
+      // Real-time time (if available)
+      const rtTime=d.rtTime ? d.rtTime.slice(0,5) : null;
+      const [rdh,rdm]=rtTime ? rtTime.split(":").map(Number) : [sdh,sdm];
+      const rtMin=toMin(rdh,rdm);
+
+      // Delay in minutes
+      let delayMin = rtMin - schedMin;
+      // Handle midnight wrap
+      if(delayMin < -120) delayMin += 1440;
+      if(delayMin > 120) delayMin -= 1440;
+
+      // Cancelled flag
+      const cancelled = d.cancelled === true || d.Cancelled === true ||
+                        (d.rtStatus && d.rtStatus.toLowerCase()==="cancelled");
+
+      // Use RT time for actual departure
+      const actualDepMin = rtTime ? rtMin : schedMin;
+      const actualDepStr = rtTime ? rtTime : schedTime;
+      const estArrMin = actualDepMin + JOURNEY;
+
+      if(!cancelled && estArrMin > mustArriveBy) return null;
+      const margin = shiftMin - estArrMin;
+
+      // Status
+      let status = "ontime";
+      if(cancelled) status = "cancelled";
+      else if(delayMin >= 2) status = "delayed";
+
+      const line = d.name || d.ProductAtStop?.name || "Train";
+      const direction = d.direction || "";
+
+      return {
+        schedTime, actualDepStr, schedMin, actualDepMin,
+        arrStr: fromMin(estArrMin), arrMin: estArrMin,
+        margin, delayMin, cancelled, status, line, direction,
+        hasRealtime: !!rtTime,
+      };
+    })
+    .filter(Boolean)
+    .sort((a,b)=>b.actualDepMin-a.actualDepMin)
+    .slice(0,6);
+}
+
+// ── Fallback parser ────────────────────────────────────────────────────────
+function getFallbackTrains(shiftStart){
+  const [sh,sm]=shiftStart.split(":").map(Number);
+  const mustArriveBy=toMin(sh,sm)-BUFFER;
+  return FALLBACK
+    .map(([dh,dm,ah,am])=>({
+      schedTime:`${pad(dh)}:${pad(dm)}`,
+      actualDepStr:`${pad(dh)}:${pad(dm)}`,
+      schedMin:toMin(dh,dm), actualDepMin:toMin(dh,dm),
+      arrStr:`${pad(ah)}:${pad(am)}`, arrMin:toMin(ah,am),
+      margin:toMin(sh,sm)-toMin(ah,am),
+      delayMin:0, cancelled:false, status:"ontime",
+      line:"Öresundståg", direction:"København H",
+      hasRealtime:false,
+    }))
+    .filter(t=>t.arrMin<=mustArriveBy)
+    .reverse().slice(0,6);
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let shifts=[], selShift=null, selTrain=null, usingFallback=false;
+
+// ── Render shifts ──────────────────────────────────────────────────────────
+function renderShifts(){
+  document.getElementById("shifts-container").innerHTML=
+    shifts.map((s,i)=>`
+      <button class="row-btn ${selShift?.date===s.date?'active':''}" onclick="pickShift(${i})">
+        <div>
+          <div class="shift-date">${dateLabel(s.date)}</div>
+          <div class="shift-title">${s.title}</div>
+        </div>
+        <div class="shift-time">${s.shiftStart}</div>
+      </button>
+    `).join("");
+}
+
+async function pickShift(i){
+  selShift=shifts[i]; selTrain=null;
+  renderShifts();
+  document.getElementById("alarm-block").style.display="none";
+  document.getElementById("trains-block").style.display="block";
+  document.getElementById("trains-title").textContent=`Trains before ${selShift.shiftStart}`;
+  await loadTrains();
+}
+
+// ── Render trains ──────────────────────────────────────────────────────────
+async function loadTrains(){
+  const c=document.getElementById("trains-container");
+  c.innerHTML='<div class="loading"><span class="spin">⟳</span> Fetching live trains…</div>';
+
+  let trains=null;
+  usingFallback=false;
+
+  const departures=await fetchDepartures(selShift.shiftStart, selShift.date);
+  if(departures){
+    trains=parseDepartures(departures, selShift.shiftStart);
+  }
+
+  // Fallback if API failed or no results
+  if(!trains || trains.length===0){
+    trains=getFallbackTrains(selShift.shiftStart);
+    usingFallback=true;
+  }
+
+  window._trains=trains;
+
+  // Update badge
+  const badge=document.getElementById("data-badge");
+  badge.className=usingFallback?"sched-badge":"live-badge";
+  badge.innerHTML=usingFallback
+    ? "📋 Scheduled"
+    : '<span class="dot"></span>Live';
+
+  if(!trains.length){
+    c.innerHTML='<div class="hint err">No suitable trains found.</div>'; return;
+  }
+  renderTrainList();
+}
+
+function renderTrainList(){
+  const trains=window._trains||[];
+  document.getElementById("trains-container").innerHTML=trains.map((t,i)=>{
+    const active=selTrain?.actualDepMin===t.actualDepMin?"active":"";
+    const delayedClass=t.status==="delayed"?"delayed":t.status==="cancelled"?"cancelled":"";
+
+    // Time display
+    let timeHtml;
+    if(t.cancelled){
+      timeHtml=`<div class="train-time-wrap">
+        <div class="train-time cancelled-time">${t.schedTime}</div>
+      </div>`;
+    } else if(t.status==="delayed"){
+      timeHtml=`<div class="train-time-wrap">
+        <div class="train-time delayed-time">${t.actualDepStr}</div>
+        <div class="train-sched">${t.schedTime}</div>
+      </div>`;
+    } else {
+      timeHtml=`<div class="train-time-wrap">
+        <div class="train-time ${t.hasRealtime?'on-time':''}">${t.actualDepStr}</div>
+      </div>`;
+    }
+
+    // Status chip
+    let chipHtml;
+    if(t.cancelled){
+      chipHtml=`<span class="status-chip status-cancelled">✕ Cancelled</span>`;
+    } else if(t.status==="delayed"){
+      chipHtml=`<span class="status-chip status-delayed">+${t.delayMin}min late</span>`;
+    } else if(t.hasRealtime){
+      chipHtml=`<span class="status-chip status-ontime">✓ On time</span>`;
+    } else {
+      chipHtml="";
+    }
+
+    // Buffer badge
+    const col=t.margin>=50?"#4ade80":t.margin>=35?"#fbbf24":"#f87171";
+    const bg =t.margin>=50?"#0a2e18":t.margin>=35?"#2a1f05":"#2a0808";
+    const bufBadge=t.cancelled?"":`<div class="badge" style="background:${bg};color:${col}">+${t.margin}m</div>`;
+
+    return `
+      <button class="row-btn ${active} ${delayedClass}"
+        onclick="${t.cancelled?'':`pickTrain(${i})`}"
+        ${t.cancelled?'style="cursor:not-allowed"':""}>
+        <div class="train-row">
+          <div class="train-col">
+            <div class="train-label">Depart Hyllie</div>
+            ${timeHtml}
+            <div style="display:flex;gap:4px;align-items:center;margin-top:3px">
+              <span class="train-line">${t.line}</span>
+              ${chipHtml}
+            </div>
+          </div>
+          <div class="train-arrow">→</div>
+          <div class="train-col">
+            <div class="train-label">Est. arrive CPH</div>
+            <div class="train-time">${t.arrStr}</div>
+          </div>
+          ${bufBadge}
+        </div>
+      </button>
+    `;
+  }).join("");
+}
+
+async function refreshTrains(){
+  if(!selShift) return;
+  selTrain=null;
+  document.getElementById("alarm-block").style.display="none";
+  await loadTrains();
+}
+
+function pickTrain(i){
+  selTrain=window._trains[i];
+  renderTrainList();
+  renderAlarm();
+  document.getElementById("alarm-block").style.display="block";
+  document.getElementById("alarm-block").scrollIntoView({behavior:"smooth"});
+}
+
+// ── Render alarm ───────────────────────────────────────────────────────────
+function renderAlarm(){
+  // Alarm is 1h before ACTUAL (real-time) departure
+  const aMins=selTrain.actualDepMin-60;
+  const aStr=fromMin(aMins);
+  const aH=Math.floor(((aMins%1440)+1440)%1440/60);
+  const aMM=((aMins%1440)+1440)%1440%60;
+
+  // Delay banner
+  const banner=document.getElementById("delay-banner");
+  if(selTrain.status==="delayed"){
+    banner.style.display="flex";
+    banner.innerHTML=`⚠️ Train delayed +${selTrain.delayMin} min · scheduled ${selTrain.schedTime} → now ${selTrain.actualDepStr} · alarm adjusted automatically`;
+  } else {
+    banner.style.display="none";
+  }
+
+  document.getElementById("s-alarm").textContent=aStr;
+  document.getElementById("s-alarm").style.color=selTrain.status==="delayed"?"#f59e0b":"#f59e0b";
+  document.getElementById("s-alarm-note").textContent=selTrain.status==="delayed"?"(adjusted for delay)":"";
+
+  document.getElementById("s-train").textContent=selTrain.actualDepStr;
+  document.getElementById("s-train").style.color=selTrain.status==="delayed"?"#f59e0b":"#4e7de8";
+  document.getElementById("s-train-sched").textContent=
+    selTrain.status==="delayed"?`sched. ${selTrain.schedTime}`:"";
+
+  document.getElementById("s-arrive").textContent=selTrain.arrStr;
+  document.getElementById("s-footer").textContent=
+    `${dateLabel(selShift.date)} · shift ${selShift.shiftStart} · +${selTrain.margin} min buffer at CPH`;
+  document.getElementById("alarm-btn-label").textContent=`Tap to set alarm · ${aStr}`;
+
+  document.getElementById("alarm-btn").onclick=()=>{
+    const label=`🚆 Hyllie ${selTrain.actualDepStr} → CPH ${selTrain.arrStr} · Shift ${selShift.shiftStart}${selTrain.status==="delayed"?` (+${selTrain.delayMin}min delay)`:""}`;
+    window.location.href=
+      `intent://alarm#Intent;action=android.intent.action.SET_ALARM;`+
+      `S.android.intent.extra.alarm.HOUR=${aH};`+
+      `S.android.intent.extra.alarm.MINUTES=${aMM};`+
+      `S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(label)};`+
+      `S.android.intent.extra.alarm.SKIP_UI=false;end`;
+  };
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+function init(){
+  shifts=parseShifts(RAW_EVENTS);
+  renderShifts();
+}
+loadKeyUI();
+init();
+</script>
+</body>
+</html>
