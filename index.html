@@ -561,12 +561,21 @@ function renderAlarm(){
 
   document.getElementById("alarm-btn").onclick=()=>{
     const label=`🚆 Hyllie ${selTrain.actualDepStr} → CPH ${selTrain.arrStr} · Shift ${selShift.shiftStart}${selTrain.status==="delayed"?` (+${selTrain.delayMin}min delay)`:""}`;
-    window.location.href=
+
+    // Method 1: intent:// via hidden anchor (works in Chrome on Android)
+    const intentUrl=
       `intent://alarm#Intent;action=android.intent.action.SET_ALARM;`+
       `S.android.intent.extra.alarm.HOUR=${aH};`+
       `S.android.intent.extra.alarm.MINUTES=${aMM};`+
       `S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(label)};`+
       `S.android.intent.extra.alarm.SKIP_UI=false;end`;
+
+    const a=document.createElement("a");
+    a.href=intentUrl;
+    a.style.display="none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>document.body.removeChild(a), 500);
   };
 }
 
